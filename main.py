@@ -110,5 +110,6 @@ def main():
           for i, hit_box in enumerate(cards_hit_box): 
             if hit_box.collidepoint(mouse_pos):
               print(f"Option {i+1} clicked")
+              print(f'this is new')
 if __name__ == '__main__':
   main()
