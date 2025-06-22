@@ -1,19 +1,8 @@
-import pygame 
-import os 
-WIDTH, HEIGHT = 1280, 720
-CARD_WIDTH = int(HEIGHT/5) #Set card width relative to window height
-CARD_HEIGHT = int(CARD_WIDTH * 16/9) #Maintain aspect ratio of card
-X_SPACING = 20 #small spacer between cards
-Y_SPACING = 50
-
-WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Monte Carlo")
-FPS = 60
-
-BACKGROUND = pygame.image.load(os.path.join('Assets', 'background.png'))
-CARD_BACK = pygame.transform.scale(pygame.image.load(os.path.join('Assets', 'card_back.png')), (CARD_WIDTH, CARD_HEIGHT))
-QUEEN = pygame.transform.scale(pygame.image.load(os.path.join('Assets','queen_of_hearts.png')), (CARD_WIDTH, CARD_HEIGHT))
-ACE = pygame.transform.scale(pygame.image.load(os.path.join('Assets','ace_of_hearts.png')), (CARD_WIDTH, CARD_HEIGHT))
+from config import *
+import sys
+import game_over as gg
+import setting_class as Settings
+import card_class as Card
 
 #Get initial position 
 def get_card_center():
@@ -60,56 +49,78 @@ def get_selected_card(mouse_pos, cards_hit_box):
       draw_show_down(mouse_pos)
   return i
 
-def play_again():
-  font = pygame.font.SysFont(None, 48)
-  small_font = pygame.font.SysFont(None, 36)
-  #Button rect
-  #yes_button = pygame.draw.rect(WINDOW, (255,255,0), (CARD_HEIGHT//5, CARD_WIDTH//5),0)
-  #no_button = pygame.draw.rect(WINDOW, (255,255,0), (CARD_HEIGHT//5, CARD_WIDTH//5),0)
-  continue_text = font.render("Continue?", True, (0,0,0))
-  yes_text = small_font.render("Yes!!!", True, (0,0,0))
-  no_text = small_font.render("No???", True, (0,0,0))
-  #Draw continue and yes/no
-  x_center = WIDTH//2 
-  y_center = HEIGHT//2 + CARD_HEIGHT//2 + Y_SPACING
-  WINDOW.blit(continue_text, (x_center - CARD_WIDTH/2, y_center))
-  WINDOW.blit(yes_text, (x_center - CARD_WIDTH/2, y_center+Y_SPACING))
-  WINDOW.blit(no_text, (x_center + CARD_WIDTH/2, y_center + Y_SPACING))
-  #rect1 = pygame.Rect(left=, top=, width=, height=)
-  # Create rects for collision detection
-  button_hit_boxes =[]
-  button_hit_boxes.append(yes_text.get_rect(topleft=(x_center - CARD_WIDTH/2, y_center + Y_SPACING)))
-  button_hit_boxes.append(yes_text.get_rect(topleft=(x_center + CARD_WIDTH/2, y_center+ Y_SPACING)))
-  pygame.display.update()
-  return button_hit_boxes
+class Game:
+  def __init__(self):
+    pygame.init()
+    self.clock = pygame.time.Clock()
+    #set the tick (fps) in main loop
+    self.settings = Settings.Settings()
+    self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
+    pygame.display.set_caption("Monte Carlo")
+    #Draw background 
+    self.game_active = True #Control game start or not 
+    #Create cards sprite group 
+    self.down_cards = pygame.sprite.Group()
+  '''
+  To update screen 
+  '''
+  def _update_screen(self):
+    self.screen.blit(self.settings.background, (0,0)) #Draw game background
+    self._create_three_cards()
+    self.down_cards.draw(self.screen)
+    pygame.display.update()
 
-def main():
-  pygame.init()
-  clock = pygame.time.Clock()
-  cards_hit_box = draw_window()
-  running = True
-  game_state = ['bet', 'start', 'gameover']
-  state = game_state[0]
-  while running: 
-    clock.tick(FPS)
+  #main game loop
+  def game_loop(self):
+    running = True 
+    while self.game_active: 
+      self.clock.tick(60)
+      self._update_screen() 
+      self._check_events()
+    print("out of loop")
+    pygame.quit()
+    sys.exit()
+
+  def _check_events(self):
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
-        running = False
-        pygame.quit()
+        self.game_active = False
+      '''
       if event.type == pygame.MOUSEBUTTONDOWN:
-        if state == game_state[0]:
+        if self.game_active:
           mouse_pos = pygame.mouse.get_pos()
           get_selected_card(mouse_pos, cards_hit_box)        
           #change game-state
-          state = game_state[2]
+          self.game_active = False
           pygame.time.delay(1000)
-        if state == game_state[2]:
+        else:
           cards_hit_box= []
-          cards_hit_box = play_again()
+          cards_hit_box = gg.play_again()
           mouse_pos = pygame.mouse.get_pos()
           for i, hit_box in enumerate(cards_hit_box): 
             if hit_box.collidepoint(mouse_pos):
               print(f"Option {i+1} clicked")
-              print(f'this is new')
+      '''
+  def _create_three_cards(self):
+    card = Card.Card(self)  
+    width,height = card.rect.size
+    #print(width) #81 expect?
+    current_centerx = card.rect.centerx
+    current_centery = card.rect.centery - 100
+    self._create_card(current_centerx, current_centery)
+    self._create_card(current_centerx - (width+20), current_centery)
+    self._create_card(current_centerx + (width+20), current_centery)
+
+  def _create_card(self, x_pos, y_pos):
+    new_card = Card.Card(self)
+    new_card.rect.centerx = x_pos 
+    new_card.rect.centery = y_pos 
+    self.down_cards.add(new_card)
+
+def main():
+  game = Game()
+  game.game_loop()
+  return 
+    
 if __name__ == '__main__':
   main()
